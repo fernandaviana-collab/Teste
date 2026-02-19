@@ -1,0 +1,29 @@
+{
+  "name": "fastteam",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "db:migrate": "cd packages/database && npx prisma migrate dev",
+    "db:generate": "cd packages/database && npx prisma generate",
+    "db:seed": "cd packages/database && npx prisma db seed",
+    "db:studio": "cd packages/database && npx prisma studio"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0",
+    "typescript": "^5.4.0",
+    "@types/node": "^20.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@8.15.0"
+}

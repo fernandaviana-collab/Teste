@@ -1,0 +1,468 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ========================================
+// CORE ENTITIES
+// ========================================
+
+model Company {
+  id          String        @id @default(uuid())
+  name        String
+  cnpj        String        @unique
+  planType    PlanType      @default(BASIC)
+  status      CompanyStatus @default(TRIAL)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  stores      Store[]
+  users       User[]
+  jobs        Job[]
+  settings    Json?
+
+  @@map("companies")
+}
+
+model Store {
+  id          String   @id @default(uuid())
+  companyId   String
+  name        String
+  address     Json
+  lat         Decimal  @db.Decimal(10, 8)
+  lng         Decimal  @db.Decimal(11, 8)
+  managerId   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company     Company          @relation(fields: [companyId], references: [id])
+  employees   Employee[]
+  gigs        GigOpportunity[]
+  schedules   Schedule[]
+
+  @@map("stores")
+  @@index([companyId])
+}
+
+model User {
+  id          String     @id @default(uuid())
+  email       String     @unique
+  phone       String?
+  password    String
+  fullName    String
+  userType    UserType
+  companyId   String?
+  storeId     String?
+  status      UserStatus @default(ACTIVE)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  metadata    Json?
+
+  company       Company?           @relation(fields: [companyId], references: [id])
+  employee      Employee?
+  intermittent  IntermittentWorker?
+  pointsLedger  PointsLedger[]
+  referrals     Referral[]
+  achievements  UserAchievement[]
+
+  @@map("users")
+  @@index([email])
+  @@index([companyId])
+}
+
+// ========================================
+// RECRUITMENT
+// ========================================
+
+model Job {
+  id            String    @id @default(uuid())
+  companyId     String
+  storeId       String?
+  title         String
+  description   String
+  jobType       JobType
+  positionLevel String
+  salaryMin     Decimal?  @db.Decimal(10, 2)
+  salaryMax     Decimal?  @db.Decimal(10, 2)
+  requirements  Json?
+  status        JobStatus @default(DRAFT)
+  createdBy     String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  filledAt      DateTime?
+  aiConfig      Json?
+
+  company     Company     @relation(fields: [companyId], references: [id])
+  candidates  Candidate[]
+
+  @@map("jobs")
+  @@index([companyId, status])
+}
+
+model Candidate {
+  id          String          @id @default(uuid())
+  userId      String?
+  jobId       String
+  name        String
+  email       String
+  phone       String?
+  source      String
+  resumeUrl   String?
+  experience  String?
+  distanceKm  Decimal?        @db.Decimal(8, 2)
+  availability String?
+  avgTenure   Int?
+  aiScore     Decimal?        @db.Decimal(5, 2)
+  aiAnalysis  Json?
+  status      CandidateStatus @default(NEW)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  job     Job @relation(fields: [jobId], references: [id])
+
+  @@map("candidates")
+  @@index([jobId, status])
+  @@index([aiScore])
+}
+
+// ========================================
+// EMPLOYEES
+// ========================================
+
+model Employee {
+  id               String         @id @default(uuid())
+  userId           String         @unique
+  companyId        String
+  storeId          String
+  position         String
+  positionLevel    String
+  hireDate         DateTime
+  salary           Decimal        @db.Decimal(10, 2)
+  status           EmployeeStatus @default(ACTIVE)
+  contractType     ContractType   @default(CLT)
+  terminatedAt     DateTime?
+  performanceScore Decimal?       @db.Decimal(5, 2)
+  metadata         Json?
+
+  user        User        @relation(fields: [userId], references: [id])
+  store       Store       @relation(fields: [storeId], references: [id])
+  schedules   Schedule[]
+  timeClocks  TimeClock[]
+
+  @@map("employees")
+  @@index([storeId, status])
+}
+
+// ========================================
+// INTERMITTENT WORKERS
+// ========================================
+
+model IntermittentWorker {
+  id                 String       @id @default(uuid())
+  userId             String       @unique
+  level              WorkerLevel  @default(BRONZE)
+  hourlyRate         Decimal      @db.Decimal(8, 2)
+  rating             Decimal      @db.Decimal(3, 2) @default(5.0)
+  totalHours         Decimal      @db.Decimal(10, 2) @default(0)
+  totalJobs          Int          @default(0)
+  attendanceRate     Decimal      @db.Decimal(5, 2) @default(100)
+  availabilityRadius Int          @default(5)
+  skills             Json?
+  certifications     Json?
+  status             WorkerStatus @default(ACTIVE)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  user       User       @relation(fields: [userId], references: [id])
+  gigMatches GigMatch[]
+
+  @@map("intermittent_workers")
+  @@index([level, rating])
+}
+
+model GigOpportunity {
+  id           String       @id @default(uuid())
+  storeId      String
+  date         DateTime     @db.Date
+  startTime    String
+  endTime      String
+  position     String
+  slots        Int
+  filledSlots  Int          @default(0)
+  hourlyRate   Decimal      @db.Decimal(8, 2)
+  urgencyLevel UrgencyLevel @default(NORMAL)
+  status       GigStatus    @default(OPEN)
+  createdAt    DateTime     @default(now())
+  filledAt     DateTime?
+
+  store   Store      @relation(fields: [storeId], references: [id])
+  matches GigMatch[]
+
+  @@map("gig_opportunities")
+  @@index([storeId, date])
+  @@index([status])
+}
+
+model GigMatch {
+  id            String      @id @default(uuid())
+  opportunityId String
+  workerId      String
+  matchScore    Decimal?    @db.Decimal(5, 2)
+  invitedAt     DateTime    @default(now())
+  responseAt    DateTime?
+  status        MatchStatus @default(INVITED)
+  checkInAt     DateTime?
+  checkOutAt    DateTime?
+  hoursWorked   Decimal?    @db.Decimal(5, 2)
+  amountPaid    Decimal?    @db.Decimal(8, 2)
+  workerRating  Decimal?    @db.Decimal(3, 2)
+  storeRating   Decimal?    @db.Decimal(3, 2)
+
+  opportunity GigOpportunity     @relation(fields: [opportunityId], references: [id])
+  worker      IntermittentWorker @relation(fields: [workerId], references: [id])
+
+  @@map("gig_matches")
+  @@index([opportunityId])
+  @@index([workerId, status])
+}
+
+// ========================================
+// SCHEDULING & TIME TRACKING
+// ========================================
+
+model Schedule {
+  id          String         @id @default(uuid())
+  storeId     String
+  employeeId  String
+  date        DateTime       @db.Date
+  shiftStart  String
+  shiftEnd    String
+  position    String
+  status      ScheduleStatus @default(SCHEDULED)
+  createdAt   DateTime       @default(now())
+
+  store      Store      @relation(fields: [storeId], references: [id])
+  employee   Employee   @relation(fields: [employeeId], references: [id])
+  timeClocks TimeClock[]
+
+  @@map("schedules")
+  @@index([storeId, date])
+  @@index([employeeId, date])
+}
+
+model TimeClock {
+  id                 String             @id @default(uuid())
+  employeeId         String
+  scheduleId         String?
+  clockIn            DateTime
+  clockOut           DateTime?
+  locationIn         Json?
+  locationOut        Json?
+  verificationMethod VerificationMethod
+  photoUrl           String?
+  totalHours         Decimal?           @db.Decimal(5, 2)
+  createdAt          DateTime           @default(now())
+
+  employee  Employee  @relation(fields: [employeeId], references: [id])
+  schedule  Schedule? @relation(fields: [scheduleId], references: [id])
+
+  @@map("time_clocks")
+  @@index([employeeId, clockIn])
+}
+
+// ========================================
+// GAMIFICATION & RECOGNITION
+// ========================================
+
+model PointsLedger {
+  id          String   @id @default(uuid())
+  userId      String
+  points      Int
+  actionType  String
+  description String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("points_ledger")
+  @@index([userId, createdAt])
+}
+
+model Achievement {
+  id          String @id @default(uuid())
+  code        String @unique
+  name        String
+  description String
+  points      Int
+  iconUrl     String?
+  criteria    Json
+
+  userAchievements UserAchievement[]
+
+  @@map("achievements")
+}
+
+model UserAchievement {
+  id            String   @id @default(uuid())
+  userId        String
+  achievementId String
+  earnedAt      DateTime @default(now())
+
+  user        User        @relation(fields: [userId], references: [id])
+  achievement Achievement @relation(fields: [achievementId], references: [id])
+
+  @@unique([userId, achievementId])
+  @@map("user_achievements")
+}
+
+// ========================================
+// CAREER & REFERRALS
+// ========================================
+
+model CareerPath {
+  id                  String @id @default(uuid())
+  companyId           String
+  fromPosition        String
+  toPosition          String
+  requirements        Json
+  estimatedTimeMonths Int
+
+  @@map("career_paths")
+}
+
+model Referral {
+  id            String         @id @default(uuid())
+  referrerId    String
+  referredEmail String
+  referredPhone String?
+  candidateId   String?
+  jobId         String?
+  status        ReferralStatus @default(PENDING)
+  bonusPaid     Decimal?       @db.Decimal(8, 2)
+  createdAt     DateTime       @default(now())
+
+  referrer User @relation(fields: [referrerId], references: [id])
+
+  @@map("referrals")
+  @@index([referrerId])
+}
+
+// ========================================
+// ENUMS
+// ========================================
+
+enum PlanType {
+  BASIC
+  PRO
+  ENTERPRISE
+}
+
+enum CompanyStatus {
+  TRIAL
+  ACTIVE
+  SUSPENDED
+  CANCELLED
+}
+
+enum UserType {
+  ADMIN
+  MANAGER
+  EMPLOYEE
+  INTERMITTENT
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum JobType {
+  CLT
+  INTERMITTENT
+}
+
+enum JobStatus {
+  DRAFT
+  ACTIVE
+  FILLED
+  CLOSED
+}
+
+enum CandidateStatus {
+  NEW
+  SCREENING
+  INTERVIEW
+  APPROVED
+  REJECTED
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  TERMINATED
+  ON_LEAVE
+}
+
+enum ContractType {
+  CLT
+  INTERMITTENT
+}
+
+enum WorkerLevel {
+  BRONZE
+  SILVER
+  GOLD
+  PLATINUM
+  DIAMOND
+}
+
+enum WorkerStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum UrgencyLevel {
+  NORMAL
+  HIGH
+  EMERGENCY
+}
+
+enum GigStatus {
+  OPEN
+  FILLED
+  CANCELLED
+}
+
+enum MatchStatus {
+  INVITED
+  ACCEPTED
+  REJECTED
+  COMPLETED
+  NO_SHOW
+}
+
+enum ScheduleStatus {
+  SCHEDULED
+  CONFIRMED
+  COMPLETED
+  ABSENT
+}
+
+enum VerificationMethod {
+  FACIAL
+  QR_CODE
+  MANUAL
+}
+
+enum ReferralStatus {
+  PENDING
+  CONTACTED
+  HIRED
+  REJECTED
+}
