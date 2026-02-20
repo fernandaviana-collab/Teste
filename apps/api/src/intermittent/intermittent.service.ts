@@ -5,14 +5,11 @@ import { CreateWorkerDto, CreateGigOpportunityDto } from './dto/create-worker.dt
 
 @Injectable()
 export class IntermittentService {
-  constructor(
-    private prisma: PrismaService,
-    private matchesService: MatchesService,
-  ) {}
+  constructor(private prisma: PrismaService, private matchesService: MatchesService) {}
 
   async createWorker(dto: CreateWorkerDto) {
     return this.prisma.intermittentWorker.create({
-      data: { ...dto, skills: dto.skills || [] },
+      data: { ...dto, skills: dto.skills || [] } as any,
       include: { user: { select: { fullName: true, email: true, phone: true } } },
     });
   }
@@ -38,8 +35,7 @@ export class IntermittentService {
       include: {
         user: { select: { fullName: true, email: true, phone: true, metadata: true } },
         gigMatches: {
-          take: 10,
-          orderBy: { invitedAt: 'desc' },
+          take: 10, orderBy: { invitedAt: 'desc' },
           include: { opportunity: { select: { position: true, date: true, store: { select: { name: true } } } } },
         },
       },
@@ -49,7 +45,7 @@ export class IntermittentService {
   }
 
   async createGig(dto: CreateGigOpportunityDto) {
-    return this.prisma.gigOpportunity.create({ data: { ...dto, date: new Date(dto.date) } });
+    return this.prisma.gigOpportunity.create({ data: { ...dto, date: new Date(dto.date) } as any });
   }
 
   async findGigs(storeId?: string, status?: string, page = 1, limit = 20) {
@@ -60,10 +56,7 @@ export class IntermittentService {
     const [data, total] = await Promise.all([
       this.prisma.gigOpportunity.findMany({
         where, skip, take: limit,
-        include: {
-          store: { select: { name: true } },
-          _count: { select: { matches: true } },
-        },
+        include: { store: { select: { name: true } }, _count: { select: { matches: true } } },
         orderBy: { date: 'asc' },
       }),
       this.prisma.gigOpportunity.count({ where }),
@@ -77,7 +70,7 @@ export class IntermittentService {
 
   async inviteWorker(opportunityId: string, workerId: string, matchScore?: number) {
     return this.prisma.gigMatch.create({
-      data: { opportunityId, workerId, matchScore, status: 'INVITED' },
+      data: { opportunityId, workerId, matchScore, status: 'INVITED' } as any,
     });
   }
 
@@ -88,7 +81,6 @@ export class IntermittentService {
       data: { status: status as any, responseAt: new Date() },
       include: { opportunity: true },
     });
-
     if (accept) {
       await this.prisma.gigOpportunity.update({
         where: { id: match.opportunityId },
@@ -99,10 +91,7 @@ export class IntermittentService {
   }
 
   async checkIn(matchId: string) {
-    return this.prisma.gigMatch.update({
-      where: { id: matchId },
-      data: { checkInAt: new Date() },
-    });
+    return this.prisma.gigMatch.update({ where: { id: matchId }, data: { checkInAt: new Date() } });
   }
 
   async checkOut(matchId: string, workerRating?: number) {

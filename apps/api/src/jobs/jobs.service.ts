@@ -5,13 +5,10 @@ import { CreateJobDto } from './dto/create-job.dto';
 
 @Injectable()
 export class JobsService {
-  constructor(
-    private prisma: PrismaService,
-    private aiScoring: AiScoringService,
-  ) {}
+  constructor(private prisma: PrismaService, private aiScoring: AiScoringService) {}
 
   async create(dto: CreateJobDto) {
-    return this.prisma.job.create({ data: { ...dto, status: 'DRAFT' } });
+    return this.prisma.job.create({ data: { ...dto, status: 'DRAFT' } as any });
   }
 
   async findAll(companyId?: string, status?: string, page = 1, limit = 20) {
@@ -34,9 +31,7 @@ export class JobsService {
     const job = await this.prisma.job.findUnique({
       where: { id },
       include: {
-        candidates: {
-          orderBy: [{ aiScore: 'desc' }, { createdAt: 'desc' }],
-        },
+        candidates: { orderBy: [{ aiScore: 'desc' }, { createdAt: 'desc' }] },
         _count: { select: { candidates: true } },
       },
     });
@@ -46,7 +41,7 @@ export class JobsService {
 
   async update(id: string, dto: Partial<CreateJobDto>) {
     await this.findOne(id);
-    return this.prisma.job.update({ where: { id }, data: dto });
+    return this.prisma.job.update({ where: { id }, data: dto as any });
   }
 
   async publish(id: string) {

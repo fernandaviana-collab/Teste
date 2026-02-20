@@ -8,10 +8,7 @@ export class EmployeesService {
 
   async create(dto: CreateEmployeeDto) {
     return this.prisma.employee.create({
-      data: {
-        ...dto,
-        hireDate: new Date(dto.hireDate),
-      },
+      data: { ...dto, hireDate: new Date(dto.hireDate) } as any,
       include: { user: { select: { fullName: true, email: true, phone: true } } },
     });
   }
@@ -67,13 +64,7 @@ export class EmployeesService {
 
   async clockIn(employeeId: string, scheduleId?: string, location?: any) {
     return this.prisma.timeClock.create({
-      data: {
-        employeeId,
-        scheduleId,
-        clockIn: new Date(),
-        locationIn: location,
-        verificationMethod: 'MANUAL',
-      },
+      data: { employeeId, scheduleId, clockIn: new Date(), locationIn: location, verificationMethod: 'MANUAL' } as any,
     });
   }
 
@@ -81,8 +72,7 @@ export class EmployeesService {
     const timeClock = await this.prisma.timeClock.findUnique({ where: { id: timeClockId } });
     if (!timeClock) throw new NotFoundException('Registro de ponto não encontrado');
     const clockOut = new Date();
-    const diffMs = clockOut.getTime() - timeClock.clockIn.getTime();
-    const totalHours = parseFloat((diffMs / 3600000).toFixed(2));
+    const totalHours = parseFloat(((clockOut.getTime() - timeClock.clockIn.getTime()) / 3600000).toFixed(2));
     return this.prisma.timeClock.update({
       where: { id: timeClockId },
       data: { clockOut, locationOut: location, totalHours },
@@ -96,10 +86,6 @@ export class EmployeesService {
       if (startDate) where.clockIn.gte = new Date(startDate);
       if (endDate) where.clockIn.lte = new Date(endDate);
     }
-    return this.prisma.timeClock.findMany({
-      where,
-      orderBy: { clockIn: 'desc' },
-      take: 50,
-    });
+    return this.prisma.timeClock.findMany({ where, orderBy: { clockIn: 'desc' }, take: 50 });
   }
 }

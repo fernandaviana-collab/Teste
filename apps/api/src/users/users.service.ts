@@ -12,7 +12,7 @@ export class UsersService {
     if (existing) throw new ConflictException('Email já cadastrado');
     const hashedPassword = await bcrypt.hash(dto.password, 10);
     return this.prisma.user.create({
-      data: { ...dto, password: hashedPassword },
+      data: { ...dto, password: hashedPassword } as any,
       select: { id: true, email: true, fullName: true, userType: true, companyId: true, status: true, createdAt: true },
     });
   }
@@ -24,9 +24,7 @@ export class UsersService {
     if (userType) where.userType = userType;
     const [data, total] = await Promise.all([
       this.prisma.user.findMany({
-        where,
-        skip,
-        take: limit,
+        where, skip, take: limit,
         select: { id: true, email: true, fullName: true, phone: true, userType: true, companyId: true, status: true, createdAt: true },
         orderBy: { createdAt: 'desc' },
       }),
@@ -58,16 +56,13 @@ export class UsersService {
     const { password, ...rest } = dto;
     return this.prisma.user.update({
       where: { id },
-      data: password ? { ...rest, password } : rest,
+      data: (password ? { ...rest, password } : rest) as any,
       select: { id: true, email: true, fullName: true, userType: true, status: true },
     });
   }
 
   async remove(id: string) {
     await this.findOne(id);
-    return this.prisma.user.update({
-      where: { id },
-      data: { status: 'INACTIVE' },
-    });
+    return this.prisma.user.update({ where: { id }, data: { status: 'INACTIVE' } });
   }
 }
