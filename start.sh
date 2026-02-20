@@ -31,7 +31,7 @@ echo "  Web PID: $!"
 
 # Aguarda a API iniciar
 echo "→ Aguardando serviços..."
-sleep 12
+sleep 20
 
 # Verifica
 API_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/api/docs-json 2>/dev/null || echo "000")
