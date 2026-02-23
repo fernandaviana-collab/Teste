@@ -15,6 +15,18 @@ psql postgresql://fastteam:password@localhost:5432/fastteam -c "SELECT 1" > /dev
   sudo -u postgres psql -c "CREATE DATABASE fastteam OWNER fastteam;" 2>/dev/null || true
 }
 
+# Rodando Prisma migrations e seed
+echo "→ Rodando migrações do banco de dados..."
+cd /home/user/Teste/apps/api
+npx prisma migrate deploy --schema=./prisma/schema.prisma 2>&1 | grep -E "(Applied|Error|migration)" || true
+
+echo "→ Gerando Prisma Client..."
+npx prisma generate --schema=./prisma/schema.prisma 2>&1 | tail -3 || true
+
+echo "→ Executando seed inicial..."
+cd /home/user/Teste
+npx ts-node packages/database/prisma/seed.ts 2>&1 | tail -10 || echo "Seed já executado ou erro (ignorando)"
+
 # API
 echo "→ Iniciando API (porta 3001)..."
 pkill -f "nest start" 2>/dev/null || true

@@ -1,7 +1,9 @@
 import axios from 'axios'
 import toast from 'react-hot-toast'
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+// Em produção (Vercel) o frontend e API ficam no mesmo domínio → usa URL relativa '/api'.
+// Em desenvolvimento o Vite proxy redireciona '/api' → 'localhost:3001'.
+const BASE_URL = import.meta.env.VITE_API_URL || '/api'
 
 export const api = axios.create({
   baseURL: BASE_URL,
