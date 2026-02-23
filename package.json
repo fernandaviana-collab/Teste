@@ -15,7 +15,7 @@
     "db:generate": "cd packages/database && npx prisma generate",
     "db:seed": "cd packages/database && npx prisma db seed",
     "db:studio": "cd packages/database && npx prisma studio",
-    "vercel:build": "cd apps/api && npx prisma generate && npx nest build && cd ../web && pnpm build"
+    "vercel:build": "cd apps/api && npx prisma generate && pnpm exec nest build && cd ../web && pnpm build"
   },
   "devDependencies": {
     "turbo": "^2.0.0",
